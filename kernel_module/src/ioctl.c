@@ -68,7 +68,7 @@ struct object
 {
 	__u64 oid;
 	struct object* next;
-	char* objspace;
+	unsigned long long objspace;
 };
 
 struct task
@@ -307,11 +307,11 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			printk("Object already exists! And the first one too!");
 		}
 		
-		//char *k_malloc;
+		unsigned long long *k_malloc;
 
-		//k_malloc = PAGE_ALIGN(temp->objspace);
+		k_malloc = PAGE_ALIGN(temp->objspace);
 		
-		unsigned long pfn = virt_to_phys((void *)temp->objspace)>>PAGE_SHIFT;
+		unsigned long pfn = virt_to_phys((void *)k_malloc)>>PAGE_SHIFT;
 
 		printk("Physical Mem location .... %x ", pfn);
 
@@ -360,12 +360,9 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     
     	printk( "DESTROY called Container with cid = %llu \n",ctrCmd.cid);
 	
-	struct container* temp_ctrNode = getContainer(current->pid);	
-	printk("Container id =%llu \n", temp_ctrNode->cid);
+	//get the correct container for current running process
+	ctrNode = getContainer(current->pid);	
 	
-    	// iterate container list and get the container with cid
-    	ctrNode = getContainerFromCid(temp_ctrNode->cid);
-
     	if(ctrNode == NULL )
 	{
         	printk( "Container not found %llu \n",ctrNode->cid);
@@ -378,14 +375,14 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     	if(ctrNode->task_list == NULL )
 	{
         	printk( "Container has no tasks %llu \n",ctrNode->cid);
-	        printk( "releasing lock %d",current->pid);
+	        printk( "releasing lock %d \n",current->pid);
 	        mutex_unlock(&my_mutex);
 	        return 0;
 	}
 
     	if (ctrNode->task_list->next == NULL)
 	{
-        	// only 1 task in container, delete task and container
+        	// only 1 task in container, delete only the task
         	printk( "from_delete only 1 task in container %llu \n",ctrNode->cid);
         	ctrNode->task_cnt = 0;
         	kfree(ctrNode->task_list);
@@ -393,7 +390,7 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
         	//deleteContainerFromList(ctrNode);
         	//ctrNode=NULL;
 		//ctrNode->task_list = NULL; 
-        	printk( "releasing lock %d",current->pid);
+        	printk( "releasing lock %d \n",current->pid);
         	mutex_unlock(&my_mutex);
         	return 0;
     	}
@@ -415,51 +412,52 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
             		printk( "from_delete not first be del %llu \n",ctrNode->cid);
             		temp = ctrNode->task_list;
             		prev = temp;
-            		while(temp != NULL && temp->thread != current){
-                	prev = temp;
-                	temp = temp->next;
-            	}
-            printk( "from_delete came till here  %llu \n",ctrNode->cid);
+            		while(temp != NULL && temp->thread != current)
+			{
+	                	prev = temp;
+	                	temp = temp->next;
+	            	}
+	            printk( "from_delete came till here  %llu \n",ctrNode->cid);
 
-            if (temp!= NULL && temp->next == NULL )
-		{
-        	        printk( "from_delete last node to be deleted  %llu \n",ctrNode->cid);
-        	        // if temp is last node
-        	        ctrNode->task_cnt -=1;
-        	        prev->next = NULL;
-        	        kfree(temp);
-     	  	}
-		else if (temp!=NULL && temp->next != NULL)
-		{
-                	printk( "from_delete not the last node to be deleted  %llu \n",ctrNode->cid);
-                	ctrNode->task_cnt -=1;
-                	prev->next = temp->next;
-                	kfree(temp);
-            	}
-		else
-		{
-                	// can it even come here ??
-        		printk( "releasing lock %d \n",current->pid);
-                	mutex_unlock(&my_mutex);
-                	return 0;
-            	}
-        }
+            		if (temp!= NULL && temp->next == NULL )
+			{	
+        	        	printk( "from_delete last node to be deleted  %llu \n",ctrNode->cid);
+        	        	// if temp is last node
+        	        	ctrNode->task_cnt -=1;
+        	        	prev->next = NULL;
+        	        	kfree(temp);
+     	  		}
+			else if (temp!=NULL && temp->next != NULL)
+			{
+                		printk( "from_delete not the last node to be deleted  %llu \n",ctrNode->cid);
+                		ctrNode->task_cnt -=1;
+                		prev->next = temp->next;
+                		kfree(temp);
+            		}
+			else
+			{
+                		// can it even come here ??
+        			printk( "releasing lock %d \n",current->pid);
+                		mutex_unlock(&my_mutex);
+                		return 0;
+            		}
+        	}
         
     }
     //print_ctr("d");
     printk( "from_destroy going in if \n");
-    if(ctrNode != NULL && ctrNode->task_list != NULL && ctrNode->task_cnt >= 1)
+    /*if(ctrNode != NULL && ctrNode->task_list != NULL && ctrNode->task_cnt >= 1)
 	{
 	        printk( "from_destroy waking up %d  current is %d\n",ctrNode->task_list->thread->pid, current->pid);
 	        //print_ctr("d>>>");
 	        temp = ctrNode->task_list;
 	        wake_up_process(temp->thread);
-	        printk( "releasing lock %d",current->pid);
+	        printk( "releasing lock %d \n",current->pid);
 	        mutex_unlock(&my_mutex);
 	        return 0;
-	}
+	}*/
 
-        printk( "releasing lock %d",current->pid);
+        printk( "releasing lock %d \n",current->pid);
 	mutex_unlock(&my_mutex);
     return 0;
 }
