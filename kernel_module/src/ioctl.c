@@ -68,7 +68,7 @@ struct object
 {
 	__u64 oid;
 	struct object* next;
-	char* objspace;
+	unsigned long long objspace;
 };
 
 struct task
@@ -88,7 +88,7 @@ struct container
 
 static struct container* ctr_list = NULL;  //list of containers
 
-struct mutex my_mutex;
+//struct mutex my_mutex;
 
 DEFINE_MUTEX(my_mutex); //global lock
 
@@ -213,21 +213,26 @@ struct container* getContainer(pid_t pid)
 
 	if(ctr_list == NULL)
 	{
+		printk("container not found for mmap.\n");
 		return NULL;
 	}
 	ctrNode = ctr_list;
 	
-	//struct task* temp_task = ctrNode->task_list;
-	
+	struct task * tmp = NULL;
+
 	while(ctrNode != NULL)
 	{
-		if(ctrNode->task_list->thread->pid == pid)
+		tmp = ctrNode->task_list;
+		while(tmp!=NULL)
 		{
-			printk("Container found for current pid....%llu \n", ctrNode->cid);
-			break;
+			if(tmp->thread->pid == pid)
+			{
+				printk("Container found for current pid....%llu \n", ctrNode->cid);		
+				return ctrNode;
+			}
+			tmp= tmp->next;		
 		}
-		ctrNode= ctrNode->next;
-		
+		ctrNode= ctrNode->next;			
 	}
 	return ctrNode;
 }
@@ -239,12 +244,12 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	//len = vma->vm_end - vma->vm_start; // calculate Length of the offset
 	//remap_pfn_range(vma, vma->vm_start, pfn, len, vma->vm_page_prot);
 	
-	printk("mmap called..... \n");
+	printk("\nmmap called..... \n");
 
 	__u64 oid = vma->vm_pgoff;
 	__u64 obj_size = vma->vm_end - vma->vm_start;
 
-	
+//	mutex_lock(&my_mutex);
 	struct container* ctrNode = getContainer(current->pid);
 
 	if(ctrNode == NULL)
@@ -307,11 +312,11 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			printk("Object already exists! And the first one too!");
 		}
 		
-		//char *k_malloc;
+		unsigned long long *k_malloc;
 
-		//k_malloc = PAGE_ALIGN(temp->objspace);
+		k_malloc = PAGE_ALIGN(temp->objspace);
 		
-		unsigned long pfn = virt_to_phys((void *)temp->objspace)>>PAGE_SHIFT;
+		unsigned long pfn = virt_to_phys((void *)k_malloc)>>PAGE_SHIFT;
 
 		printk("Physical Mem location .... %x ", pfn);
 
@@ -323,15 +328,17 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 		if(ans < 0)
 		{
 			printk("Sorry! could not map the address.... \n");
+			//mutex_unlock(&my_mutex);
 			return -EIO;
 		} 
 	}
+	//mutex_unlock(&my_mutex);
     return 0;
 }
 
 int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("Locking..... \n");	
+	printk("\nLocking..... \n");	
 	mutex_lock(&my_mutex);
     return 0;
 }
@@ -339,7 +346,7 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("Unlocking..... \n");	
+	printk("\nUnlocking..... \n");	
 	mutex_unlock(&my_mutex);
     return 0;
 }
@@ -353,19 +360,16 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     	struct task* prev = NULL;
 
     	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
-
+	printk("\n\n");
     	printk( "try to take lock %d \n",current->pid);
     	mutex_lock(&my_mutex);
     	printk( "Attained lock %d \n",current->pid);
     
     	printk( "DESTROY called Container with cid = %llu \n",ctrCmd.cid);
 	
-	struct container* temp_ctrNode = getContainer(current->pid);	
-	printk("Container id =%llu \n", temp_ctrNode->cid);
+	//get the correct container for current running process
+	ctrNode = getContainer(current->pid);	
 	
-    	// iterate container list and get the container with cid
-    	ctrNode = getContainerFromCid(temp_ctrNode->cid);
-
     	if(ctrNode == NULL )
 	{
         	printk( "Container not found %llu \n",ctrNode->cid);
@@ -378,22 +382,24 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     	if(ctrNode->task_list == NULL )
 	{
         	printk( "Container has no tasks %llu \n",ctrNode->cid);
-	        printk( "releasing lock %d",current->pid);
+	        printk( "releasing lock %d \n",current->pid);
 	        mutex_unlock(&my_mutex);
 	        return 0;
 	}
 
     	if (ctrNode->task_list->next == NULL)
 	{
-        	// only 1 task in container, delete task and container
+        	// only 1 task in container, delete only the task
         	printk( "from_delete only 1 task in container %llu \n",ctrNode->cid);
         	ctrNode->task_cnt = 0;
-        	kfree(ctrNode->task_list);
+		temp = ctrNode->task_list;
+		ctrNode->task_list = NULL;
+        	kfree(temp);
         	//printk( "COMPLETELY DESTROY  Container %llu task_cnt %d  \n",ctrNode->cid, ctrNode->task_cnt);
         	//deleteContainerFromList(ctrNode);
         	//ctrNode=NULL;
 		//ctrNode->task_list = NULL; 
-        	printk( "releasing lock %d",current->pid);
+        	printk( "releasing lock %d \n",current->pid);
         	mutex_unlock(&my_mutex);
         	return 0;
     	}
@@ -415,51 +421,52 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
             		printk( "from_delete not first be del %llu \n",ctrNode->cid);
             		temp = ctrNode->task_list;
             		prev = temp;
-            		while(temp != NULL && temp->thread != current){
-                	prev = temp;
-                	temp = temp->next;
-            	}
-            printk( "from_delete came till here  %llu \n",ctrNode->cid);
+            		while(temp != NULL && temp->thread != current)
+			{
+	                	prev = temp;
+	                	temp = temp->next;
+	            	}
+	            printk( "from_delete came till here  %llu \n",ctrNode->cid);
 
-            if (temp!= NULL && temp->next == NULL )
-		{
-        	        printk( "from_delete last node to be deleted  %llu \n",ctrNode->cid);
-        	        // if temp is last node
-        	        ctrNode->task_cnt -=1;
-        	        prev->next = NULL;
-        	        kfree(temp);
-     	  	}
-		else if (temp!=NULL && temp->next != NULL)
-		{
-                	printk( "from_delete not the last node to be deleted  %llu \n",ctrNode->cid);
-                	ctrNode->task_cnt -=1;
-                	prev->next = temp->next;
-                	kfree(temp);
-            	}
-		else
-		{
-                	// can it even come here ??
-        		printk( "releasing lock %d \n",current->pid);
-                	mutex_unlock(&my_mutex);
-                	return 0;
-            	}
-        }
+            		if (temp!= NULL && temp->next == NULL )
+			{	
+        	        	printk( "from_delete last node to be deleted  %llu \n",ctrNode->cid);
+        	        	// if temp is last node
+        	        	ctrNode->task_cnt -=1;
+        	        	prev->next = NULL;
+        	        	kfree(temp);
+     	  		}
+			else if (temp!=NULL && temp->next != NULL)
+			{
+                		printk( "from_delete not the last node to be deleted  %llu \n",ctrNode->cid);
+                		ctrNode->task_cnt -=1;
+                		prev->next = temp->next;
+                		kfree(temp);
+            		}
+			else
+			{
+                		// can it even come here ??
+        			printk( "releasing lock %d \n",current->pid);
+                		mutex_unlock(&my_mutex);
+                		return 0;
+            		}
+        	}
         
     }
     //print_ctr("d");
-    printk( "from_destroy going in if \n");
+    /*printk( "from_destroy going in if \n");
     if(ctrNode != NULL && ctrNode->task_list != NULL && ctrNode->task_cnt >= 1)
 	{
 	        printk( "from_destroy waking up %d  current is %d\n",ctrNode->task_list->thread->pid, current->pid);
 	        //print_ctr("d>>>");
 	        temp = ctrNode->task_list;
 	        wake_up_process(temp->thread);
-	        printk( "releasing lock %d",current->pid);
+	        printk( "releasing lock %d \n",current->pid);
 	        mutex_unlock(&my_mutex);
 	        return 0;
 	}
-
-        printk( "releasing lock %d",current->pid);
+*/
+        printk( "releasing lock %d \n",current->pid);
 	mutex_unlock(&my_mutex);
     return 0;
 }
@@ -474,35 +481,43 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 	//struct object* obj= NULL;
 
 	struct memory_container_cmd ctrCmd;
+	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
 	
+	printk("\n\ncreate cid:%d\n",ctrCmd.cid);
 	printk("try to take the lock %d \n", current->pid);
 	mutex_lock(&my_mutex);
 	printk("attained lock %d \n", current->pid);
-
-	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
 
 	ctrNode = getContainerFromCid(ctrCmd.cid);
 	
 	if(ctrNode != NULL)
 	{
-		printk("Container exists %llu \n", ctrCmd.cid);
+		printk("Container exists %llu \n", ctrNode->cid);
 
 		tn = getNewTask();
+		printk("\n after getNewtask!\n");
 		
 		if(tn == NULL)
 		{
-			printk("releasing the lock %d \n", current->pid);
+			printk("releasing the lock, task not created %d \n", current->pid);
 			mutex_unlock(&my_mutex);
 			return 0;
 		}
 
 		ctrNode->task_cnt +=1;
-		
-		for(temp = ctrNode->task_list; (temp!=NULL) && (temp->next !=NULL); temp = temp->next);
-		
-		if(temp->next == NULL)
+		//temp = ctrNode->task_list;
+		//for(temp = ctrNode->task_list; (temp != NULL) && (temp->next!=NULL) ; temp = temp->next);;
+		printk("\n task to add\n");
+		if(ctrNode->task_list == NULL)
 		{
-			temp->next = tn;
+			printk("tasks added at start.\n");
+			ctrNode->task_list = tn;
+		}
+		else{
+			printk("task added at last.\n");
+			tn->next = ctrNode->task_list;
+			ctrNode->task_list = tn;
+			
 		}
 		
 	}
@@ -531,8 +546,17 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 			mutex_unlock(&my_mutex);
 			return 0;
 		}
-
+		
 		ctrNode->task_list = tn;
+		/*if(ctrNode->task_list == NULL)
+		{	
+			ctrNode->task_list = tn;
+		}
+		else
+		{
+			tn->next = ctrNode->task_list;
+			ctrNode->task_list = tn;
+		}*/		
 		
 		if(ctr_list ==  NULL)
 		{
@@ -547,7 +571,7 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 		}
 	}
 
-	if(ctrNode->task_list != NULL && ctrNode->task_cnt >1)
+/*	if(ctrNode->task_list != NULL && ctrNode->task_cnt >1)
 	{
 		set_current_state(TASK_INTERRUPTIBLE);
 		printk("releasing the lock %d", current->pid);
@@ -558,7 +582,9 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 	{
 		printk("releasing the lock %d", current->pid);
 		mutex_unlock(&my_mutex);
-	}
+	}*/
+		printk("releasing the lock %d", current->pid);
+		mutex_unlock(&my_mutex);
 
     return 0;
 }
