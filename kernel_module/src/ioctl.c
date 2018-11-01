@@ -140,7 +140,7 @@ struct container* getContainer(pid_t pid)
 
 	if(ctr_list == NULL)
 	{
-		printk("container not found for mmap.\n");
+		printk("Container not found\n");
 		return NULL;
 	}
 	ctrNode = ctr_list;
