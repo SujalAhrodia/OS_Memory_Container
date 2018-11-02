@@ -29,9 +29,7 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-// Project 2: 
-// 1st member's name: Sujal Sujal, 1st member's Unity ID: ssujal;
-// 2nd member's name: Bhanu Sreekar Reddy Karumuri, 2nd member's Unity ID: bkarumu 
+// Project 2: Sujal Sujal, ssujal; Bhanu Sreekar Reddy Karumuri, bkarumu 
 
 #include "memory_container.h"
 
