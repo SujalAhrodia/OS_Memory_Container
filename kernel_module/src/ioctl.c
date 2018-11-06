@@ -193,7 +193,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 			con_obj->oid = oid;
 			con_obj->next = NULL;
-			con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
+			con_obj->objspace = kmalloc(vma->vm_end - vma->vm_start, GFP_KERNEL);
 	
 			printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 			
@@ -223,7 +223,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 				struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 				con_obj->oid = oid;
 				con_obj->next = NULL;
-				con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
+				con_obj->objspace = kmalloc(vma->vm_end - vma->vm_start, GFP_KERNEL);
 
 				temp->next = con_obj;
 				temp = temp->next;
@@ -243,10 +243,10 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 
 		printk("Physical Mem location .... %x ", pfn);
 
-		unsigned long l = vma->vm_end - vma->vm_start;
-		int ans;
+		//unsigned long l = vma->vm_end - vma->vm_start;
+		unsigned long long int ans;
 
-		ans = remap_pfn_range(vma, vma->vm_start, pfn, l, vma->vm_page_prot);
+		ans = remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 		
 		if(ans < 0)
 		{
