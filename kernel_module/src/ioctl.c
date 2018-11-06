@@ -193,7 +193,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 			con_obj->oid = oid;
 			con_obj->next = NULL;
-			con_obj->objspace = kcalloc(1,obj_size, GFP_KERNEL);
+			con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
 	
 			printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 			
@@ -223,7 +223,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 				struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 				con_obj->oid = oid;
 				con_obj->next = NULL;
-				con_obj->objspace = kcalloc(1,obj_size, GFP_KERNEL);
+				con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
 
 				temp->next = con_obj;
 				temp = temp->next;
