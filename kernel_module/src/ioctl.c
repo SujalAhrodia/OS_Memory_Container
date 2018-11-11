@@ -168,7 +168,6 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	printk("\nmmap called..... \n");
 
 	__u64 oid = vma->vm_pgoff;
-	__u64 obj_size = vma->vm_end - vma->vm_start;
 
 	struct container* ctrNode = getContainer(current->pid);
 
@@ -179,7 +178,6 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	else
 	{
 		printk("Container found inside mmap....\n");
-		
 		//for a given container
 
 		//create object reference
@@ -193,7 +191,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 			con_obj->oid = oid;
 			con_obj->next = NULL;
-			con_obj->objspace = kmalloc(vma->vm_end - vma->vm_start, GFP_KERNEL);
+			con_obj->objspace = kcalloc(1,vma->vm_end - vma->vm_start, GFP_KERNEL);
 	
 			printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 			
@@ -223,7 +221,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 				struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 				con_obj->oid = oid;
 				con_obj->next = NULL;
-				con_obj->objspace = kmalloc(vma->vm_end - vma->vm_start, GFP_KERNEL);
+				con_obj->objspace = kcalloc(1,vma->vm_end - vma->vm_start, GFP_KERNEL);
 
 				temp->next = con_obj;
 				temp = temp->next;
@@ -235,16 +233,16 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			printk("Object already exists! And the first one too!");
 		}
 		
-		unsigned long long *k_malloc;
+		//unsigned long long *k_malloc;
 
-		k_malloc = PAGE_ALIGN(temp->objspace);
+		//k_malloc = PAGE_ALIGN(temp->objspace);
 		
-		unsigned long pfn = virt_to_phys((void *)k_malloc)>>PAGE_SHIFT;
+		unsigned long pfn = virt_to_phys(temp->objspace)>>PAGE_SHIFT;
 
 		printk("Physical Mem location .... %x ", pfn);
 
 		//unsigned long l = vma->vm_end - vma->vm_start;
-		unsigned long long int ans;
+		unsigned long long ans;
 
 		ans = remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 		
