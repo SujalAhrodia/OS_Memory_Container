@@ -233,15 +233,14 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			//printk("Object already exists! And the first one too!");
 		}
 		
-		//unsigned long long *k_malloc;
+		unsigned long long *k_malloc;
 
-		//k_malloc = PAGE_ALIGN(temp->objspace);
+		k_malloc = PAGE_ALIGN(temp->objspace);
 		
 		unsigned long pfn = virt_to_phys(temp->objspace)>>PAGE_SHIFT;
 
 		//printk("Physical Mem location .... %x ", pfn);
 
-		//unsigned long l = vma->vm_end - vma->vm_start;
 		unsigned long long ans;
 
 		ans = remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end - vma->vm_start, vma->vm_page_prot);
