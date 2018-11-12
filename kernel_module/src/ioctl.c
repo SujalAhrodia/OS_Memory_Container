@@ -87,7 +87,7 @@ struct container* getContainerFromCid(__u64 cid)
 	{
 		if(ctrNode->cid == cid)
 		{
-			printk("Container Found %llu \n", ctrNode->cid);
+			//printk("Container Found %llu \n", ctrNode->cid);
 			break;
 		}
 		ctrNode = ctrNode->next;
@@ -117,7 +117,7 @@ struct container* getNewContainer(__u64 cid)
 	
 	if(ctrNode == NULL)
 	{
-		printk("Unable to create a container...\n");
+		//printk("Unable to create a container...\n");
 		return NULL;
 	}
 	ctrNode->task_cnt = 1;
@@ -132,13 +132,13 @@ struct container* getNewContainer(__u64 cid)
 // getting container id of the current task //
 struct container* getContainer(pid_t pid)
 {
-	printk("Finding the CID of current pid %d...... \n", pid);
+	//printk("Finding the CID of current pid %d...... \n", pid);
 	
 	struct container* ctrNode;
 
 	if(ctr_list == NULL)
 	{
-		printk("Container not found\n");
+		//printk("Container not found\n");
 		return NULL;
 	}
 	ctrNode = ctr_list;
@@ -152,7 +152,7 @@ struct container* getContainer(pid_t pid)
 		{
 			if(tmp->thread->pid == pid)
 			{
-				printk("Container found for current pid....%llu \n", ctrNode->cid);		
+				//printk("Container found for current pid....%llu \n", ctrNode->cid);		
 				return ctrNode;
 			}
 			tmp= tmp->next;		
@@ -165,7 +165,7 @@ struct container* getContainer(pid_t pid)
 // Memory-Mapping function
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-	printk("\nmmap called..... \n");
+	//printk("\nmmap called..... \n");
 
 	__u64 oid = vma->vm_pgoff;
 
@@ -173,11 +173,11 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	if(ctrNode == NULL)
 	{
-		printk("Container not found...!!! \n");
+		//printk("Container not found...!!! \n");
 	}
 	else
 	{
-		printk("Container found inside mmap....\n");
+		//printk("Container found inside mmap....\n");
 		//for a given container
 
 		//create object reference
@@ -193,7 +193,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			con_obj->next = NULL;
 			con_obj->objspace = kcalloc(1,vma->vm_end - vma->vm_start, GFP_KERNEL);
 	
-			printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
+			//printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 			
 			//link this created object to the specific container
 			ctrNode->obj = con_obj;
@@ -208,7 +208,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 				{
 					temp= temp->next;
 					flag = true;
-					printk("Object for container with cid %llu and object id %llu \n", ctrNode->cid, oid);
+					//printk("Object for container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 					break;
 				}
 				temp = temp->next;
@@ -216,7 +216,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			if(!flag)
 			{
 				//if no object already exists, create one
-				printk("Creating object for container with cid %llu and object id %llu \n", ctrNode->cid, oid);
+				//printk("Creating object for container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 
 				struct object* con_obj = kcalloc(1,sizeof(struct object), GFP_KERNEL);
 				con_obj->oid = oid;
@@ -230,7 +230,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 		else
 		{
 			//Referring the first object
-			printk("Object already exists! And the first one too!");
+			//printk("Object already exists! And the first one too!");
 		}
 		
 		//unsigned long long *k_malloc;
@@ -239,7 +239,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 		
 		unsigned long pfn = virt_to_phys(temp->objspace)>>PAGE_SHIFT;
 
-		printk("Physical Mem location .... %x ", pfn);
+		//printk("Physical Mem location .... %x ", pfn);
 
 		//unsigned long l = vma->vm_end - vma->vm_start;
 		unsigned long long ans;
@@ -248,7 +248,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 		
 		if(ans < 0)
 		{
-			printk("Sorry! could not map the address.... \n");
+			//printk("Sorry! could not map the address.... \n");
 			return -EIO;
 		} 
 	}
@@ -260,7 +260,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 //Locking function
 int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("\nLocking..... \n");	
+	//printk("\nLocking..... \n");	
 	mutex_lock(&my_mutex);
     return 0;
 }
@@ -268,7 +268,7 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 //Unlocking function
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("\nUnlocking..... \n");	
+	//printk("\nUnlocking..... \n");	
 	mutex_unlock(&my_mutex);
     return 0;
 }
@@ -282,29 +282,29 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     	struct task* prev = NULL;
 
     	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
-	printk("\n\n");
-    	printk( "try to take lock %d \n",current->pid);
+	//printk("\n\n");
+    	//printk( "try to take lock %d \n",current->pid);
     	mutex_lock(&my_mutex);
-    	printk( "Attained lock %d \n",current->pid);
+    	//printk( "Attained lock %d \n",current->pid);
     
-    	printk( "Delete called Container with cid = %llu \n",ctrCmd.cid);
+    	//printk( "Delete called Container with cid = %llu \n",ctrCmd.cid);
 	
 	//get the container for current running process
 	ctrNode = getContainer(current->pid);	
 	
     	if(ctrNode == NULL )
 	{
-        	printk( "Container not found %llu \n",ctrNode->cid);
-        	printk( "releasing lock %d",current->pid);
+        	//printk( "Container not found %llu \n",ctrNode->cid);
+        	//printk( "releasing lock %d",current->pid);
         	mutex_unlock(&my_mutex);
         	return 0;
     	}
-      	printk( "Delete: Container found %llu \n",ctrNode->cid);
+      	//printk( "Delete: Container found %llu \n",ctrNode->cid);
     
     	if(ctrNode->task_list == NULL )
 	{
-        	printk( "Container has no tasks %llu \n",ctrNode->cid);
-	        printk( "releasing lock %d \n",current->pid);
+        	//printk( "Container has no tasks %llu \n",ctrNode->cid);
+	        //printk( "releasing lock %d \n",current->pid);
 	        mutex_unlock(&my_mutex);
 	        return 0;
 	}
@@ -312,22 +312,22 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
     	if (ctrNode->task_list->next == NULL)
 	{
         	// only 1 task in container, delete only the task and not the container
-        	printk( "Delete: only 1 task in container %llu \n",ctrNode->cid);
+        	//printk( "Delete: only 1 task in container %llu \n",ctrNode->cid);
         	ctrNode->task_cnt = 0;
 		temp = ctrNode->task_list;
 		ctrNode->task_list = NULL;
         	kfree(temp);
-        	printk( "releasing lock %d \n",current->pid);
+        	//printk( "releasing lock %d \n",current->pid);
         	mutex_unlock(&my_mutex);
         	return 0;
     	}
 	else 
 	{
         	// first task to be deleted
-        	printk( "Delete: delete a task %llu pid= %d\n",ctrNode->cid, current->pid);
+        	//printk( "Delete: delete a task %llu pid= %d\n",ctrNode->cid, current->pid);
         	if (current == ctrNode->task_list->thread)
 		{
-            		printk( "Delete: first task to be deleted %llu \n",ctrNode->cid);
+            		//printk( "Delete: first task to be deleted %llu \n",ctrNode->cid);
             
             		temp = ctrNode->task_list;
             		ctrNode->task_list = ctrNode->task_list->next;
@@ -336,7 +336,7 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
         	}
 		else
 		{
-            		printk( "Delete: not the first task to be deleted %llu \n",ctrNode->cid);
+            		//printk( "Delete: not the first task to be deleted %llu \n",ctrNode->cid);
             		temp = ctrNode->task_list;
             		prev = temp;
             		while(temp != NULL && temp->thread != current)
@@ -344,11 +344,11 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 	                	prev = temp;
 	                	temp = temp->next;
 	            	}
-	            printk( "Delete: still here!!%llu \n",ctrNode->cid);
+	            //printk( "Delete: still here!!%llu \n",ctrNode->cid);
 
             		if (temp!= NULL && temp->next == NULL )
 			{	
-        	        	printk( "Delete: last node to be deleted  %llu \n",ctrNode->cid);
+        	        	//printk( "Delete: last node to be deleted  %llu \n",ctrNode->cid);
         	        	// if temp is last node
         	        	ctrNode->task_cnt -=1;
         	        	prev->next = NULL;
@@ -356,7 +356,7 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
      	  		}
 			else if (temp!=NULL && temp->next != NULL)
 			{
-                		printk( "Delete: not the last node to be deleted  %llu \n",ctrNode->cid);
+                		//printk( "Delete: not the last node to be deleted  %llu \n",ctrNode->cid);
                 		ctrNode->task_cnt -=1;
                 		prev->next = temp->next;
                 		kfree(temp);
@@ -364,14 +364,14 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 			else
 			{
                 		//just-in-case 
-        			printk( "releasing lock %d \n",current->pid);
+        			//printk( "releasing lock %d \n",current->pid);
                 		mutex_unlock(&my_mutex);
                 		return 0;
             		}
         	}
         
     }    
-	printk( "releasing lock %d \n",current->pid);
+	//printk( "releasing lock %d \n",current->pid);
 	mutex_unlock(&my_mutex);
     return 0;
 }
@@ -387,22 +387,22 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 	struct memory_container_cmd ctrCmd;
 	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
 	
-	printk("Try to take the lock %d \n", current->pid);
+	//printk("Try to take the lock %d \n", current->pid);
 	mutex_lock(&my_mutex);
-	printk("Attained lock %d \n", current->pid);
+	//printk("Attained lock %d \n", current->pid);
 
 	ctrNode = getContainerFromCid(ctrCmd.cid);
 	
 	if(ctrNode != NULL)
 	{
-		printk("Container exists %llu \n", ctrNode->cid);
+		//printk("Container exists %llu \n", ctrNode->cid);
 
 		tn = getNewTask();
-		printk("\n after getNewtask!\n");
+		//printk("\n after getNewtask!\n");
 		
 		if(tn == NULL)
 		{
-			printk("releasing the lock, task not created %d \n", current->pid);
+			//printk("releasing the lock, task not created %d \n", current->pid);
 			mutex_unlock(&my_mutex);
 			return 0;
 		}
@@ -413,38 +413,37 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 
 		if(ctrNode->task_list == NULL)
 		{
-			printk("tasks added at start.\n");
+			//printk("tasks added at start.\n");
 			ctrNode->task_list = tn;
 		}
 		else
 		{
-			printk("task added at last.\n");
+			//printk("task added at last.\n");
 			tn->next = ctrNode->task_list;
 			ctrNode->task_list = tn;			
 		}	
 	}
 	else
 	{
-		printk("Container Not Found %llu, creating a new container... \n", ctrCmd.cid);
-		
+		//printk("Container Not Found %llu, creating a new container... \n", ctrCmd.cid);
 		ctrNode = getNewContainer(ctrCmd.cid);
 
 		if(ctrNode == NULL)
 		{
-			printk("getNewContainer failed %llu \n", ctrCmd.cid);
-			printk("releasing lock %d", current->pid);
+			//printk("getNewContainer failed %llu \n", ctrCmd.cid);
+			//printk("releasing lock %d", current->pid);
 			mutex_unlock(&my_mutex);
 			return 0;
 		}
 	
-		printk("creating new task for the container.... %llu \n", ctrCmd.cid);
+		//printk("creating new task for the container.... %llu \n", ctrCmd.cid);
 		
 		tn = getNewTask();
 
 		if(tn == NULL)
 		{
-			printk("getNewTask Failed %llu... \n", ctrCmd.cid);
-			printk("releasing the lock.... %d", current->pid);
+			//printk("getNewTask Failed %llu... \n", ctrCmd.cid);
+			//printk("releasing the lock.... %d", current->pid);
 			mutex_unlock(&my_mutex);
 			return 0;
 		}
@@ -453,17 +452,17 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 
 		if(ctr_list ==  NULL)
 		{
-			printk("Adding the first container %llu..... \n", ctrCmd.cid);
+			//printk("Adding the first container %llu..... \n", ctrCmd.cid);
 			ctr_list = ctrNode;
 		}
 		else
 		{
-			printk("Adding additional container %llu..... \n", ctrCmd.cid);
+			//printk("Adding additional container %llu..... \n", ctrCmd.cid);
 			ctrNode->next = ctr_list;
 			ctr_list = ctrNode;
 		}
 	}
-	printk("releasing the lock %d", current->pid);
+	//printk("releasing the lock %d", current->pid);
 	mutex_unlock(&my_mutex);
 
     return 0;
@@ -478,27 +477,27 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 	
 	copy_from_user(&ctrCmd, user_cmd, sizeof(struct memory_container_cmd));
 
-	printk("Inside free().... \n");
+	//printk("Inside free().... \n");
 	
 	struct container* ctrNode = getContainer(current->pid);
 
-	printk("Container id inside free()=%llu \n", ctrNode->cid);
+	//printk("Container id inside free()=%llu \n", ctrNode->cid);
 
 	if(ctrNode == NULL)	
 	{
-		printk("No Container exists... \n");
+		//printk("No Container exists... \n");
 	}
 	else
 	{
-		printk("Memory free for container id %llu and object id %llu = \n",ctrNode->cid, ctrNode->obj->oid);
+		//printk("Memory free for container id %llu and object id %llu = \n",ctrNode->cid, ctrNode->obj->oid);
 
 		struct object* temp_ref = ctrNode->obj;
 		
-		printk("CMD oid= %llu and container oid= %llu \n", ctrCmd.oid, temp_ref->oid);
+		//printk("CMD oid= %llu and container oid= %llu \n", ctrCmd.oid, temp_ref->oid);
 
 		if(temp_ref == NULL)
 		{
-			printk("No object to free \n");
+			//printk("No object to free \n");
 		}
 		
 		//Deleting first object
@@ -506,22 +505,22 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 		{
 			if(temp_ref->next == NULL)
 			{
-				printk("Only object of the container.. \n");
+				//printk("Only object of the container.. \n");
 				ctrNode->obj = NULL;
 				kfree(temp_ref); //free the temp pointer
-				printk("Freed only object  \n");
+				//printk("Freed only object  \n");
 			}
 			else
 			{
-				printk("First object of the container.... \n");
+				//printk("First object of the container.... \n");
 				ctrNode->obj = temp_ref->next;
 				kfree(temp_ref);
-				printk("Freed first object  \n");
+				//printk("Freed first object  \n");
 			}
 		}
 		else
 		{
-			printk("Middle object of the container ... \n");
+			//printk("Middle object of the container ... \n");
 
 			struct object *prev;
 
@@ -535,11 +534,11 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 			{
 				prev->next = temp_ref->next;
 				kfree(temp_ref);
-				printk("Freed middle object  \n");
+				//printk("Freed middle object  \n");
 			}
 			else
 			{
-				printk("Sorry, No object found!! \n");
+				//printk("Sorry, No object found!! \n");
 			}
 		}
 	}	
