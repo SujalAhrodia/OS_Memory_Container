@@ -164,12 +164,7 @@ struct container* getContainer(pid_t pid)
 
 // Memory-Mapping function
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
-{
-	//vm_area_struct *vma : this data structure contains page offsets, virtual address etc.
-	//pfn = virt_to_phys() // calculate Page frame Number
-	//len = vma->vm_end - vma->vm_start; // calculate Length of the offset
-	//remap_pfn_range(vma, vma->vm_start, pfn, len, vma->vm_page_prot);
-	
+{	
 	printk("\nmmap called..... \n");
 
 	__u64 oid = vma->vm_pgoff;
@@ -198,7 +193,7 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			struct object* con_obj = kmalloc(sizeof(struct object), GFP_KERNEL);
 			con_obj->oid = oid;
 			con_obj->next = NULL;
-			con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
+			con_obj->objspace = kcalloc(1,vma->vm_end - vma->vm_start, GFP_KERNEL);
 	
 			printk("Creating first memory object of container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 			
@@ -225,10 +220,10 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 				//if no object already exists, create one
 				printk("Creating object for container with cid %llu and object id %llu \n", ctrNode->cid, oid);
 
-				struct object* con_obj = kmalloc(sizeof(struct object), GFP_KERNEL);
+				struct object* con_obj = kcalloc(sizeof(struct object), GFP_KERNEL);
 				con_obj->oid = oid;
 				con_obj->next = NULL;
-				con_obj->objspace = kmalloc(obj_size, GFP_KERNEL);
+				con_obj->objspace = kmalloc(1, vma->vm_end - vma->vm_start, GFP_KERNEL);
 
 				temp->next = con_obj;
 				temp = temp->next;
@@ -239,19 +234,14 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 			//Referring the first object
 			printk("Object already exists! And the first one too!");
 		}
-		
-		unsigned long long *k_malloc;
-
-		k_malloc = PAGE_ALIGN(temp->objspace);
-		
-		unsigned long pfn = virt_to_phys((void *)k_malloc)>>PAGE_SHIFT;
+				
+		unsigned long pfn = virt_to_phys(temp->objspace)>>PAGE_SHIFT;
 
 		printk("Physical Mem location .... %x ", pfn);
 
-		unsigned long l = vma->vm_end - vma->vm_start;
-		int ans;
+		unsigned long long ans;
 
-		ans = remap_pfn_range(vma, vma->vm_start, pfn, l, vma->vm_page_prot);
+		ans = remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 		
 		if(ans < 0)
 		{
